@@ -1,12 +1,12 @@
 // Firebase configuration
-// IMPORTANT: Replace these with your actual Firebase config values
+// IMPORTANT: Replace these with your ACTUAL Firebase config values from Firebase Console
 const firebaseConfig = {
-    apiKey: "AIzaSyBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // Replace with your API key
-    authDomain: "binge-club-xxxxx.firebaseapp.com", // Replace with your project ID
-    projectId: "binge-club-xxxxx", // Replace with your project ID
-    storageBucket: "binge-club-xxxxx.appspot.com", // Replace with your project ID
-    messagingSenderId: "123456789012", // Replace with your sender ID
-    appId: "1:123456789012:web:abcdef1234567890" // Replace with your app ID
+    apiKey: "AIzaSyB1234567890abcdefghijklmnopqrstuvwxyz", // REPLACE with your real API key
+    authDomain: "your-project-id.firebaseapp.com", // REPLACE with your project ID
+    projectId: "your-project-id", // REPLACE with your project ID
+    storageBucket: "your-project-id.appspot.com", // REPLACE with your project ID
+    messagingSenderId: "123456789012", // REPLACE with your sender ID
+    appId: "1:123456789012:web:abcdef1234567890" // REPLACE with your app ID
 };
 
 // Initialize Firebase
@@ -67,6 +67,8 @@ async function signInWithGoogle() {
             errorMessage = 'Network error. Please check your connection.';
         } else if (error.code === 'auth/unauthorized-domain') {
             errorMessage = 'Domain not authorized. Please contact support.';
+        } else if (error.code === 'auth/api-key-not-valid') {
+            errorMessage = 'Firebase configuration error. Please contact support.';
         }
         
         showTemporaryMessage(errorMessage, 'error');
