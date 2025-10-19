@@ -1,12 +1,13 @@
 // Firebase configuration
 // IMPORTANT: Replace these with your ACTUAL Firebase config values from Firebase Console
 const firebaseConfig = {
-    apiKey: "AIzaSyB1234567890abcdefghijklmnopqrstuvwxyz", // REPLACE with your real API key
-    authDomain: "your-project-id.firebaseapp.com", // REPLACE with your project ID
-    projectId: "your-project-id", // REPLACE with your project ID
-    storageBucket: "your-project-id.appspot.com", // REPLACE with your project ID
-    messagingSenderId: "123456789012", // REPLACE with your sender ID
-    appId: "1:123456789012:web:abcdef1234567890" // REPLACE with your app ID
+  apiKey: "AIzaSyCeMocKNEiuJZ57BR57xxeG9uj-WQHRQ88",
+  authDomain: "bingeclub-6de64.firebaseapp.com",
+  projectId: "bingeclub-6de64",
+  storageBucket: "bingeclub-6de64.firebasestorage.app",
+  messagingSenderId: "679218215745",
+  appId: "1:679218215745:web:f3db8382e6c5871108bfc0",
+  measurementId: "G-8YEXL09ZZ6"
 };
 
 // Initialize Firebase
