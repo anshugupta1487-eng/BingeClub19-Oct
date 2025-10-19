@@ -25,11 +25,16 @@ provider.setCustomParameters({
 
 // Authentication state management
 let currentUser = null;
+let authStateInitialized = false;
 
 // Sign in with Google
 async function signInWithGoogle() {
     try {
         console.log('Attempting Google sign-in...');
+        
+        // Wait for auth state to be initialized
+        await waitForAuthState();
+        
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
         
@@ -100,9 +105,30 @@ async function signOutUser() {
     }
 }
 
+// Wait for auth state to be initialized
+function waitForAuthState() {
+    return new Promise((resolve) => {
+        if (authStateInitialized) {
+            resolve();
+        } else {
+            const checkAuthState = () => {
+                if (authStateInitialized) {
+                    resolve();
+                } else {
+                    setTimeout(checkAuthState, 100);
+                }
+            };
+            checkAuthState();
+        }
+    });
+}
+
 // Listen for auth state changes
 onAuthStateChanged(auth, (user) => {
     console.log('Auth state changed:', user ? 'User signed in' : 'User signed out');
+    
+    // Mark auth state as initialized
+    authStateInitialized = true;
     
     if (user) {
         // User is signed in
@@ -114,6 +140,10 @@ onAuthStateChanged(auth, (user) => {
                 picture: user.photoURL,
                 idToken: idToken
             };
+            updateAuthUI();
+        }).catch((error) => {
+            console.error('Error getting ID token:', error);
+            currentUser = null;
             updateAuthUI();
         });
     } else {
@@ -240,13 +270,15 @@ function getCurrentUser() {
 
 // Get ID token for API calls
 async function getIdToken() {
-    if (currentUser) {
-        // Refresh token if needed
-        const user = auth.currentUser;
-        if (user) {
-            const idToken = await user.getIdToken();
+    if (currentUser && auth.currentUser) {
+        try {
+            // Refresh token if needed
+            const idToken = await auth.currentUser.getIdToken();
             currentUser.idToken = idToken;
             return idToken;
+        } catch (error) {
+            console.error('Error getting ID token:', error);
+            return null;
         }
     }
     return null;

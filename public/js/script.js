@@ -32,6 +32,7 @@ const signOutBtn = document.getElementById('signOutBtn');
 
 // State
 let currentMovie = null;
+let isSearching = false;
 
 // Event Listeners
 searchForm.addEventListener('submit', handleSearch);
@@ -62,6 +63,12 @@ async function handleSignOut() {
 async function handleSearch(e) {
     e.preventDefault();
     
+    // Prevent multiple simultaneous searches
+    if (isSearching) {
+        console.log('Search already in progress, ignoring...');
+        return;
+    }
+    
     const query = searchInput.value.trim();
     if (!query) return;
     
@@ -72,19 +79,26 @@ async function handleSearch(e) {
         return;
     }
     
+    // Set searching flag
+    isSearching = true;
+    
     // Show loading state
     showLoading();
     hideError();
     hideResults();
     
     try {
+        console.log('Starting search for:', query);
         const data = await fetchMovieData(query);
         currentMovie = data;
         displayMovieData(data);
         await checkMovieExists(data.imdbID);
     } catch (err) {
+        console.error('Search error:', err);
         showError(err.message || 'Failed to fetch data. Please try again.');
-        console.error('Error:', err);
+    } finally {
+        // Reset searching flag
+        isSearching = false;
     }
 }
 
@@ -92,13 +106,14 @@ async function handleSearch(e) {
 async function fetchMovieData(title) {
     const url = `${API_BASE_URL}/search?title=${encodeURIComponent(title)}`;
     
-    // Get auth token
-    const idToken = window.firebaseAuth ? await window.firebaseAuth.getIdToken() : null;
+    // Get auth token with retry logic
+    const idToken = await getAuthTokenWithRetry();
     if (!idToken) {
-        throw new Error('Authentication required');
+        throw new Error('Authentication required. Please sign in again.');
     }
     
     console.log('Fetching movie data for:', title);
+    console.log('Using token:', idToken.substring(0, 20) + '...');
     
     const response = await fetch(url, {
         headers: {
@@ -107,7 +122,10 @@ async function fetchMovieData(title) {
         }
     });
     
+    console.log('Search response status:', response.status);
+    
     const data = await response.json();
+    console.log('Search response data:', data);
     
     if (!response.ok) {
         console.error('API Error:', data);
@@ -115,6 +133,31 @@ async function fetchMovieData(title) {
     }
     
     return data;
+}
+
+// Get auth token with retry logic
+async function getAuthTokenWithRetry(maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            if (window.firebaseAuth) {
+                const token = await window.firebaseAuth.getIdToken();
+                if (token) {
+                    return token;
+                }
+            }
+            
+            // Wait a bit before retry
+            if (i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        } catch (error) {
+            console.error(`Token fetch attempt ${i + 1} failed:`, error);
+            if (i === maxRetries - 1) {
+                throw error;
+            }
+        }
+    }
+    return null;
 }
 
 // Display Movie Data
@@ -166,7 +209,7 @@ function createRatingElement(source, value) {
 // Check if movie exists in database
 async function checkMovieExists(imdbId) {
     try {
-        const idToken = window.firebaseAuth ? await window.firebaseAuth.getIdToken() : null;
+        const idToken = await getAuthTokenWithRetry();
         if (!idToken) return;
         
         const response = await fetch(`${API_BASE_URL}/check/${imdbId}`, {
@@ -218,9 +261,9 @@ async function handleSaveMovie() {
 
 // Save Movie to Database
 async function saveMovieToDatabase(movieData) {
-    const idToken = window.firebaseAuth ? await window.firebaseAuth.getIdToken() : null;
+    const idToken = await getAuthTokenWithRetry();
     if (!idToken) {
-        throw new Error('Authentication required');
+        throw new Error('Authentication required. Please sign in again.');
     }
     
     console.log('Saving movie:', movieData.title);
@@ -274,7 +317,11 @@ async function loadSavedMovies() {
     hideSavedError();
     
     try {
-        const idToken = await window.firebaseAuth.getIdToken();
+        const idToken = await getAuthTokenWithRetry();
+        if (!idToken) {
+            throw new Error('Authentication required. Please sign in again.');
+        }
+        
         const response = await fetch(`${API_BASE_URL}/saved`, {
             headers: {
                 'Authorization': `Bearer ${idToken}`,
@@ -336,9 +383,9 @@ function displaySavedMovies(movies) {
 // Remove Saved Movie
 async function removeSavedMovie(movieId) {
     try {
-        const idToken = window.firebaseAuth ? await window.firebaseAuth.getIdToken() : null;
+        const idToken = await getAuthTokenWithRetry();
         if (!idToken) {
-            throw new Error('Authentication required');
+            throw new Error('Authentication required. Please sign in again.');
         }
         
         const response = await fetch(`${API_BASE_URL}/${movieId}`, {
