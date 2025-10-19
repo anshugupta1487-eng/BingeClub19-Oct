@@ -98,6 +98,8 @@ async function fetchMovieData(title) {
         throw new Error('Authentication required');
     }
     
+    console.log('Fetching movie data for:', title);
+    
     const response = await fetch(url, {
         headers: {
             'Authorization': `Bearer ${idToken}`,
@@ -108,6 +110,7 @@ async function fetchMovieData(title) {
     const data = await response.json();
     
     if (!response.ok) {
+        console.error('API Error:', data);
         throw new Error(data.error || `HTTP error! status: ${response.status}`);
     }
     
@@ -208,8 +211,8 @@ async function handleSaveMovie() {
             await saveMovieToDatabase(currentMovie);
         }
     } catch (err) {
+        console.error('Save movie error:', err);
         showError(err.message || 'Failed to update movie list');
-        console.error('Error:', err);
     }
 }
 
@@ -220,6 +223,9 @@ async function saveMovieToDatabase(movieData) {
         throw new Error('Authentication required');
     }
     
+    console.log('Saving movie:', movieData.title);
+    console.log('Movie data:', movieData);
+    
     const response = await fetch(`${API_BASE_URL}/save`, {
         method: 'POST',
         headers: {
@@ -229,10 +235,14 @@ async function saveMovieToDatabase(movieData) {
         body: JSON.stringify(movieData)
     });
     
+    console.log('Save response status:', response.status);
+    
     const data = await response.json();
+    console.log('Save response data:', data);
     
     if (!response.ok) {
-        throw new Error(data.error || 'Failed to save movie');
+        console.error('Save movie failed:', data);
+        throw new Error(data.error || data.message || 'Failed to save movie');
     }
     
     saveBtn.textContent = 'Remove from My List';
@@ -280,8 +290,8 @@ async function loadSavedMovies() {
         
         displaySavedMovies(data.data);
     } catch (err) {
+        console.error('Load saved movies error:', err);
         showSavedError(err.message || 'Failed to load saved movies');
-        console.error('Error:', err);
     }
 }
 
@@ -349,8 +359,8 @@ async function removeSavedMovie(movieId) {
         await loadSavedMovies();
         showTemporaryMessage('Movie removed from your list!', 'success');
     } catch (err) {
+        console.error('Remove movie error:', err);
         showTemporaryMessage(err.message || 'Failed to remove movie', 'error');
-        console.error('Error:', err);
     }
 }
 

@@ -65,3 +65,6 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
+// Test routes
+app.use('/api/test', require('./routes/test'));
