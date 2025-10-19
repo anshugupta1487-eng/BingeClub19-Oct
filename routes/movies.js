@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const database = require('../services/database');
 const router = express.Router();
 
 const OMDB_API_KEY = process.env.OMDB_API_KEY || '26722011';
@@ -32,6 +33,9 @@ router.get('/search', async (req, res) => {
             });
         }
 
+        // Add to search history
+        await database.addSearchHistory(title);
+
         // Format the response
         const formattedData = {
             title: data.Title,
@@ -44,7 +48,8 @@ router.get('/search', async (req, res) => {
             imdbRating: data.imdbRating,
             imdbVotes: data.imdbVotes,
             type: data.Type,
-            poster: data.Poster
+            poster: data.Poster,
+            imdbID: data.imdbID
         };
 
         res.json(formattedData);
@@ -53,6 +58,127 @@ router.get('/search', async (req, res) => {
         console.error('Error fetching movie data:', error);
         res.status(500).json({ 
             error: 'Failed to fetch movie data',
+            message: error.message 
+        });
+    }
+});
+
+// POST /api/movies/save - Save movie to database
+router.post('/save', async (req, res) => {
+    try {
+        const movieData = req.body;
+        
+        if (!movieData.title || !movieData.imdbID) {
+            return res.status(400).json({ 
+                error: 'Title and IMDB ID are required' 
+            });
+        }
+
+        const result = await database.saveMovie(movieData);
+        
+        res.json({
+            success: true,
+            message: result.isNew ? 'Movie saved successfully' : 'Movie already exists',
+            data: result.data
+        });
+
+    } catch (error) {
+        console.error('Error saving movie:', error);
+        res.status(500).json({ 
+            error: 'Failed to save movie',
+            message: error.message 
+        });
+    }
+});
+
+// GET /api/movies/saved - Get all saved movies
+router.get('/saved', async (req, res) => {
+    try {
+        const movies = await database.getSavedMovies();
+        
+        res.json({
+            success: true,
+            data: movies
+        });
+
+    } catch (error) {
+        console.error('Error fetching saved movies:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch saved movies',
+            message: error.message 
+        });
+    }
+});
+
+// GET /api/movies/history - Get search history
+router.get('/history', async (req, res) => {
+    try {
+        const { limit = 10 } = req.query;
+        const history = await database.getSearchHistory(parseInt(limit));
+        
+        res.json({
+            success: true,
+            data: history
+        });
+
+    } catch (error) {
+        console.error('Error fetching search history:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch search history',
+            message: error.message 
+        });
+    }
+});
+
+// DELETE /api/movies/:id - Delete movie from saved list
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        if (!id) {
+            return res.status(400).json({ 
+                error: 'Movie ID is required' 
+            });
+        }
+
+        await database.deleteMovie(id);
+        
+        res.json({
+            success: true,
+            message: 'Movie deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Error deleting movie:', error);
+        res.status(500).json({ 
+            error: 'Failed to delete movie',
+            message: error.message 
+        });
+    }
+});
+
+// GET /api/movies/check/:imdbId - Check if movie exists in database
+router.get('/check/:imdbId', async (req, res) => {
+    try {
+        const { imdbId } = req.params;
+        
+        if (!imdbId) {
+            return res.status(400).json({ 
+                error: 'IMDB ID is required' 
+            });
+        }
+
+        const exists = await database.movieExists(imdbId);
+        
+        res.json({
+            success: true,
+            exists: exists
+        });
+
+    } catch (error) {
+        console.error('Error checking movie existence:', error);
+        res.status(500).json({ 
+            error: 'Failed to check movie existence',
             message: error.message 
         });
     }

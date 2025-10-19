@@ -13,40 +13,89 @@
             <p>Discover ratings for your favorite movies and TV shows</p>
         </header>
 
-        <div class="search-section">
-            <form id="searchForm" class="search-form">
-                <div class="input-group">
-                    <input 
-                        type="text" 
-                        id="searchInput" 
-                        placeholder="Enter movie or TV show title..." 
-                        required
-                    >
-                    <button type="submit" id="searchBtn">Search</button>
-                </div>
-            </form>
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="tab-btn active" data-tab="search">Search</button>
+            <button class="tab-btn" data-tab="saved">My Movies</button>
+            <button class="tab-btn" data-tab="history">History</button>
         </div>
 
-        <div id="loading" class="loading hidden">
-            <div class="spinner"></div>
-            <p>Searching for your show...</p>
-        </div>
+        <!-- Search Tab -->
+        <div id="searchTab" class="tab-content active">
+            <div class="search-section">
+                <form id="searchForm" class="search-form">
+                    <div class="input-group">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            placeholder="Enter movie or TV show title..." 
+                            required
+                        >
+                        <button type="submit" id="searchBtn">Search</button>
+                    </div>
+                </form>
+            </div>
 
-        <div id="results" class="results hidden">
-            <div class="movie-card">
-                <h2 id="movieTitle"></h2>
-                <p id="movieYear" class="year"></p>
-                <p id="moviePlot" class="plot"></p>
-                
-                <div class="ratings-section">
-                    <h3>Ratings</h3>
-                    <div id="ratingsContainer" class="ratings-grid"></div>
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Searching for your show...</p>
+            </div>
+
+            <div id="results" class="results hidden">
+                <div class="movie-card">
+                    <div class="movie-header">
+                        <h2 id="movieTitle"></h2>
+                        <button id="saveBtn" class="save-btn">Save to My List</button>
+                    </div>
+                    <p id="movieYear" class="year"></p>
+                    <p id="moviePlot" class="plot"></p>
+                    
+                    <div class="ratings-section">
+                        <h3>Ratings</h3>
+                        <div id="ratingsContainer" class="ratings-grid"></div>
+                    </div>
                 </div>
+            </div>
+
+            <div id="error" class="error hidden">
+                <p id="errorMessage"></p>
             </div>
         </div>
 
-        <div id="error" class="error hidden">
-            <p id="errorMessage"></p>
+        <!-- Saved Movies Tab -->
+        <div id="savedTab" class="tab-content">
+            <div class="section-header">
+                <h2>My Saved Movies</h2>
+                <button id="refreshSavedBtn" class="refresh-btn">Refresh</button>
+            </div>
+            <div id="savedMovies" class="movies-grid">
+                <!-- Saved movies will be loaded here -->
+            </div>
+            <div id="savedLoading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Loading your movies...</p>
+            </div>
+            <div id="savedError" class="error hidden">
+                <p id="savedErrorMessage"></p>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="historyTab" class="tab-content">
+            <div class="section-header">
+                <h2>Search History</h2>
+                <button id="refreshHistoryBtn" class="refresh-btn">Refresh</button>
+            </div>
+            <div id="searchHistory" class="history-list">
+                <!-- Search history will be loaded here -->
+            </div>
+            <div id="historyLoading" class="loading hidden">
+                <div class="spinner"></div>
+                <p>Loading search history...</p>
+            </div>
+            <div id="historyError" class="error hidden">
+                <p id="historyErrorMessage"></p>
+            </div>
         </div>
     </div>
 

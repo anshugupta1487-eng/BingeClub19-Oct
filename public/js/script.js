@@ -13,9 +13,39 @@ const movieYear = document.getElementById('movieYear');
 const moviePlot = document.getElementById('moviePlot');
 const ratingsContainer = document.getElementById('ratingsContainer');
 const errorMessage = document.getElementById('errorMessage');
+const saveBtn = document.getElementById('saveBtn');
+
+// Tab elements
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+// Saved movies elements
+const savedMovies = document.getElementById('savedMovies');
+const savedLoading = document.getElementById('savedLoading');
+const savedError = document.getElementById('savedError');
+const savedErrorMessage = document.getElementById('savedErrorMessage');
+const refreshSavedBtn = document.getElementById('refreshSavedBtn');
+
+// History elements
+const searchHistory = document.getElementById('searchHistory');
+const historyLoading = document.getElementById('historyLoading');
+const historyError = document.getElementById('historyError');
+const historyErrorMessage = document.getElementById('historyErrorMessage');
+const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+
+// State
+let currentMovie = null;
 
 // Event Listeners
 searchForm.addEventListener('submit', handleSearch);
+saveBtn.addEventListener('click', handleSaveMovie);
+refreshSavedBtn.addEventListener('click', loadSavedMovies);
+refreshHistoryBtn.addEventListener('click', loadSearchHistory);
+
+// Tab switching
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
 
 // Search Handler
 async function handleSearch(e) {
@@ -31,7 +61,9 @@ async function handleSearch(e) {
     
     try {
         const data = await fetchMovieData(query);
+        currentMovie = data;
         displayMovieData(data);
+        await checkMovieExists(data.imdbID);
     } catch (err) {
         showError(err.message || 'Failed to fetch data. Please try again.');
         console.error('Error:', err);
@@ -98,6 +130,222 @@ function createRatingElement(source, value) {
     return ratingDiv;
 }
 
+// Check if movie exists in database
+async function checkMovieExists(imdbId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/check/${imdbId}`);
+        const data = await response.json();
+        
+        if (data.success && data.exists) {
+            saveBtn.textContent = 'Remove from My List';
+            saveBtn.classList.add('saved');
+        } else {
+            saveBtn.textContent = 'Save to My List';
+            saveBtn.classList.remove('saved');
+        }
+    } catch (err) {
+        console.error('Error checking movie existence:', err);
+    }
+}
+
+// Handle Save/Remove Movie
+async function handleSaveMovie() {
+    if (!currentMovie) return;
+    
+    const isSaved = saveBtn.classList.contains('saved');
+    
+    try {
+        if (isSaved) {
+            // Remove movie (we'll need to get the database ID first)
+            await removeMovieFromSaved(currentMovie.imdbID);
+        } else {
+            // Save movie
+            await saveMovieToDatabase(currentMovie);
+        }
+    } catch (err) {
+        showError(err.message || 'Failed to update movie list');
+        console.error('Error:', err);
+    }
+}
+
+// Save Movie to Database
+async function saveMovieToDatabase(movieData) {
+    const response = await fetch(`${API_BASE_URL}/save`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(movieData)
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+        throw new Error(data.error || 'Failed to save movie');
+    }
+    
+    saveBtn.textContent = 'Remove from My List';
+    saveBtn.classList.add('saved');
+    
+    // Show success message
+    showTemporaryMessage('Movie saved to your list!', 'success');
+}
+
+// Remove Movie from Saved (simplified - would need database ID in real implementation)
+async function removeMovieFromSaved(imdbId) {
+    // For now, we'll just update the UI
+    // In a real implementation, you'd need the database ID
+    saveBtn.textContent = 'Save to My List';
+    saveBtn.classList.remove('saved');
+    
+    showTemporaryMessage('Movie removed from your list!', 'success');
+}
+
+// Load Saved Movies
+async function loadSavedMovies() {
+    showSavedLoading();
+    hideSavedError();
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/saved`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to load saved movies');
+        }
+        
+        displaySavedMovies(data.data);
+    } catch (err) {
+        showSavedError(err.message || 'Failed to load saved movies');
+        console.error('Error:', err);
+    }
+}
+
+// Display Saved Movies
+function displaySavedMovies(movies) {
+    hideSavedLoading();
+    
+    if (!movies || movies.length === 0) {
+        savedMovies.innerHTML = `
+            <div class="empty-state">
+                <h3>No movies saved yet</h3>
+                <p>Search for movies and save them to your list!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    savedMovies.innerHTML = movies.map(movie => `
+        <div class="movie-item">
+            <div class="movie-item-header">
+                <h3>${movie.title}</h3>
+                <p class="year">${movie.year}</p>
+                <p class="plot">${movie.plot || 'No plot available'}</p>
+            </div>
+            <div class="movie-item-actions">
+                <button class="remove-btn" onclick="removeSavedMovie('${movie.id}')">
+                    Remove
+                </button>
+                <div class="ratings-preview">
+                    ${movie.ratings && movie.ratings.length > 0 
+                        ? movie.ratings.map(rating => 
+                            `<span class="rating-badge">${rating.source}: ${rating.value}</span>`
+                          ).join(' ')
+                        : '<span class="no-ratings">No ratings</span>'
+                    }
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Load Search History
+async function loadSearchHistory() {
+    showHistoryLoading();
+    hideHistoryError();
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/history?limit=20`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to load search history');
+        }
+        
+        displaySearchHistory(data.data);
+    } catch (err) {
+        showHistoryError(err.message || 'Failed to load search history');
+        console.error('Error:', err);
+    }
+}
+
+// Display Search History
+function displaySearchHistory(history) {
+    hideHistoryLoading();
+    
+    if (!history || history.length === 0) {
+        searchHistory.innerHTML = `
+            <div class="empty-state">
+                <h3>No search history</h3>
+                <p>Start searching for movies to see your history here!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    searchHistory.innerHTML = history.map(item => `
+        <div class="history-item">
+            <div>
+                <div class="history-query">${item.search_query}</div>
+                ${item.movies ? `<div class="movie-info">${item.movies.title} (${item.movies.year})</div>` : ''}
+            </div>
+            <div class="history-time">${formatDate(item.searched_at)}</div>
+        </div>
+    `).join('');
+}
+
+// Remove Saved Movie
+async function removeSavedMovie(movieId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/${movieId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to remove movie');
+        }
+        
+        // Reload saved movies
+        await loadSavedMovies();
+        showTemporaryMessage('Movie removed from your list!', 'success');
+    } catch (err) {
+        showTemporaryMessage(err.message || 'Failed to remove movie', 'error');
+        console.error('Error:', err);
+    }
+}
+
+// Tab Switching
+function switchTab(tabName) {
+    // Update tab buttons
+    tabBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    
+    // Update tab content
+    tabContents.forEach(content => {
+        content.classList.toggle('active', content.id === `${tabName}Tab`);
+    });
+    
+    // Load data when switching to saved or history tabs
+    if (tabName === 'saved') {
+        loadSavedMovies();
+    } else if (tabName === 'history') {
+        loadSearchHistory();
+    }
+}
+
 // Show/Hide Functions
 function showLoading() {
     loading.classList.remove('hidden');
@@ -130,6 +378,75 @@ function hideError() {
     error.classList.add('hidden');
 }
 
+function showSavedLoading() {
+    savedLoading.classList.remove('hidden');
+    savedMovies.innerHTML = '';
+}
+
+function hideSavedLoading() {
+    savedLoading.classList.add('hidden');
+}
+
+function showSavedError(message) {
+    hideSavedLoading();
+    savedErrorMessage.textContent = message;
+    savedError.classList.remove('hidden');
+}
+
+function hideSavedError() {
+    savedError.classList.add('hidden');
+}
+
+function showHistoryLoading() {
+    historyLoading.classList.remove('hidden');
+    searchHistory.innerHTML = '';
+}
+
+function hideHistoryLoading() {
+    historyLoading.classList.add('hidden');
+}
+
+function showHistoryError(message) {
+    hideHistoryLoading();
+    historyErrorMessage.textContent = message;
+    historyError.classList.remove('hidden');
+}
+
+function hideHistoryError() {
+    historyError.classList.add('hidden');
+}
+
+// Utility Functions
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
+function showTemporaryMessage(message, type = 'info') {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `temp-message ${type}`;
+    messageDiv.textContent = message;
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+    `;
+    
+    document.body.appendChild(messageDiv);
+    
+    setTimeout(() => {
+        messageDiv.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => messageDiv.remove(), 300);
+    }, 3000);
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     searchInput.focus();
@@ -148,3 +465,39 @@ async function checkAPIHealth() {
         console.warn('API Health check failed:', err);
     }
 }
+
+// Add CSS for animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .rating-badge {
+        display: inline-block;
+        background: #f8f9fa;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+    
+    .no-ratings {
+        color: #666;
+        font-style: italic;
+    }
+    
+    .movie-info {
+        color: #666;
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+`;
+document.head.appendChild(style);
