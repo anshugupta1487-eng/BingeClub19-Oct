@@ -8,8 +8,20 @@ const movieRoutes = require('./routes/movies');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// CORS Configuration for Render
+const corsOptions = {
+    origin: [
+        'https://binge-club-19-oct.onrender.com', // Your Render URL
+        'http://localhost:3000' // For local development
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+
 // Middleware
-app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
