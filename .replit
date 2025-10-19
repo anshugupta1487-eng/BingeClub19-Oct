@@ -1,0 +1,12 @@
+{
+  "run": "npm start",
+  "debugger": true,
+  "interpreter": "nodejs",
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "deployment": {
+    "startCommand": "npm start",
+    "run": "npm start"
+  }
+}

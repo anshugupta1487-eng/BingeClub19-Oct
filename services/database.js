@@ -11,12 +11,13 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 class DatabaseService {
-    // Save movie to database
-    async saveMovie(movieData) {
+    // Save movie to database (user-specific)
+    async saveMovie(movieData, userId) {
         try {
             const { data, error } = await supabase
                 .from('movies')
                 .insert([{
+                    user_id: userId,
                     title: movieData.title,
                     year: movieData.year,
                     plot: movieData.plot,
@@ -33,11 +34,12 @@ class DatabaseService {
                 .single();
 
             if (error) {
-                // If movie already exists, return existing record
+                // If movie already exists for this user, return existing record
                 if (error.code === '23505') { // Unique constraint violation
                     const { data: existingMovie } = await supabase
                         .from('movies')
                         .select('*')
+                        .eq('user_id', userId)
                         .eq('imdb_id', movieData.imdbID)
                         .single();
                     return { data: existingMovie, isNew: false };
@@ -47,7 +49,7 @@ class DatabaseService {
 
             // Save ratings if they exist
             if (movieData.ratings && movieData.ratings.length > 0) {
-                await this.saveRatings(data.id, movieData.ratings);
+                await this.saveRatings(data.id, userId, movieData.ratings);
             }
 
             return { data, isNew: true };
@@ -57,11 +59,12 @@ class DatabaseService {
         }
     }
 
-    // Save ratings for a movie
-    async saveRatings(movieId, ratings) {
+    // Save ratings for a movie (user-specific)
+    async saveRatings(movieId, userId, ratings) {
         try {
             const ratingsData = ratings.map(rating => ({
                 movie_id: movieId,
+                user_id: userId,
                 source: rating.Source,
                 value: rating.Value
             }));
@@ -77,8 +80,8 @@ class DatabaseService {
         }
     }
 
-    // Get all saved movies
-    async getSavedMovies() {
+    // Get all saved movies for a user
+    async getSavedMovies(userId) {
         try {
             const { data, error } = await supabase
                 .from('movies')
@@ -89,6 +92,7 @@ class DatabaseService {
                         value
                     )
                 `)
+                .eq('user_id', userId)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -99,8 +103,8 @@ class DatabaseService {
         }
     }
 
-    // Get movie by ID
-    async getMovieById(movieId) {
+    // Get movie by ID (user-specific)
+    async getMovieById(movieId, userId) {
         try {
             const { data, error } = await supabase
                 .from('movies')
@@ -112,6 +116,7 @@ class DatabaseService {
                     )
                 `)
                 .eq('id', movieId)
+                .eq('user_id', userId)
                 .single();
 
             if (error) throw error;
@@ -122,13 +127,14 @@ class DatabaseService {
         }
     }
 
-    // Delete movie from saved list
-    async deleteMovie(movieId) {
+    // Delete movie from saved list (user-specific)
+    async deleteMovie(movieId, userId) {
         try {
             const { error } = await supabase
                 .from('movies')
                 .delete()
-                .eq('id', movieId);
+                .eq('id', movieId)
+                .eq('user_id', userId);
 
             if (error) throw error;
             return { success: true };
@@ -138,13 +144,14 @@ class DatabaseService {
         }
     }
 
-    // Check if movie exists
-    async movieExists(imdbId) {
+    // Check if movie exists for user
+    async movieExists(imdbId, userId) {
         try {
             const { data, error } = await supabase
                 .from('movies')
                 .select('id')
                 .eq('imdb_id', imdbId)
+                .eq('user_id', userId)
                 .single();
 
             if (error && error.code !== 'PGRST116') { // Not found error
@@ -158,12 +165,13 @@ class DatabaseService {
         }
     }
 
-    // Add search history
-    async addSearchHistory(searchQuery, movieId = null) {
+    // Add search history (user-specific)
+    async addSearchHistory(searchQuery, userId, movieId = null) {
         try {
             const { error } = await supabase
                 .from('search_history')
                 .insert([{
+                    user_id: userId,
                     search_query: searchQuery,
                     movie_id: movieId
                 }]);
@@ -175,8 +183,8 @@ class DatabaseService {
         }
     }
 
-    // Get search history
-    async getSearchHistory(limit = 10) {
+    // Get search history for user
+    async getSearchHistory(userId, limit = 10) {
         try {
             const { data, error } = await supabase
                 .from('search_history')
@@ -188,6 +196,7 @@ class DatabaseService {
                         poster_url
                     )
                 `)
+                .eq('user_id', userId)
                 .order('searched_at', { ascending: false })
                 .limit(limit);
 
@@ -195,6 +204,50 @@ class DatabaseService {
             return data;
         } catch (error) {
             console.error('Error fetching search history:', error);
+            throw error;
+        }
+    }
+
+    // Create or update user profile
+    async upsertUserProfile(userData) {
+        try {
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .upsert([{
+                    user_id: userData.uid,
+                    display_name: userData.name,
+                    email: userData.email,
+                    photo_url: userData.picture
+                }], {
+                    onConflict: 'user_id'
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error upserting user profile:', error);
+            throw error;
+        }
+    }
+
+    // Get user profile
+    async getUserProfile(userId) {
+        try {
+            const { data, error } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('user_id', userId)
+                .single();
+
+            if (error && error.code !== 'PGRST116') { // Not found error
+                throw error;
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
             throw error;
         }
     }

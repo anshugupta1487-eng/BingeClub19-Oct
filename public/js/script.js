@@ -26,6 +26,10 @@ const savedError = document.getElementById('savedError');
 const savedErrorMessage = document.getElementById('savedErrorMessage');
 const refreshSavedBtn = document.getElementById('refreshSavedBtn');
 
+// Auth elements
+const signInBtn = document.getElementById('signInBtn');
+const signOutBtn = document.getElementById('signOutBtn');
+
 // State
 let currentMovie = null;
 
@@ -33,11 +37,26 @@ let currentMovie = null;
 searchForm.addEventListener('submit', handleSearch);
 saveBtn.addEventListener('click', handleSaveMovie);
 refreshSavedBtn.addEventListener('click', loadSavedMovies);
+signInBtn.addEventListener('click', handleSignIn);
+signOutBtn.addEventListener('click', handleSignOut);
 
 // Tab switching
 tabBtns.forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
+
+// Authentication handlers
+async function handleSignIn() {
+    if (window.firebaseAuth) {
+        await window.firebaseAuth.signInWithGoogle();
+    }
+}
+
+async function handleSignOut() {
+    if (window.firebaseAuth) {
+        await window.firebaseAuth.signOutUser();
+    }
+}
 
 // Search Handler
 async function handleSearch(e) {
@@ -45,6 +64,13 @@ async function handleSearch(e) {
     
     const query = searchInput.value.trim();
     if (!query) return;
+    
+    // Check if user is authenticated
+    const user = window.firebaseAuth ? window.firebaseAuth.getCurrentUser() : null;
+    if (!user) {
+        showError('Please sign in to search for movies');
+        return;
+    }
     
     // Show loading state
     showLoading();
@@ -66,7 +92,19 @@ async function handleSearch(e) {
 async function fetchMovieData(title) {
     const url = `${API_BASE_URL}/search?title=${encodeURIComponent(title)}`;
     
-    const response = await fetch(url);
+    // Get auth token
+    const idToken = window.firebaseAuth ? await window.firebaseAuth.getIdToken() : null;
+    if (!idToken) {
+        throw new Error('Authentication required');
+    }
+    
+    const response = await fetch(url, {
+        headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json'
+        }
+    });
+    
     const data = await response.json();
     
     if (!response.ok) {
@@ -125,7 +163,16 @@ function createRatingElement(source, value) {
 // Check if movie exists in database
 async function checkMovieExists(imdbId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/check/${imdbId}`);
+        const idToken = window.firebaseAuth ? await window.firebaseAuth.getIdToken() : null;
+        if (!idToken) return;
+        
+        const response = await fetch(`${API_BASE_URL}/check/${imdbId}`, {
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
         const data = await response.json();
         
         if (data.success && data.exists) {
@@ -143,6 +190,12 @@ async function checkMovieExists(imdbId) {
 // Handle Save/Remove Movie
 async function handleSaveMovie() {
     if (!currentMovie) return;
+    
+    const user = window.firebaseAuth ? window.firebaseAuth.getCurrentUser() : null;
+    if (!user) {
+        showError('Please sign in to save movies');
+        return;
+    }
     
     const isSaved = saveBtn.classList.contains('saved');
     
@@ -162,9 +215,15 @@ async function handleSaveMovie() {
 
 // Save Movie to Database
 async function saveMovieToDatabase(movieData) {
+    const idToken = window.firebaseAuth ? await window.firebaseAuth.getIdToken() : null;
+    if (!idToken) {
+        throw new Error('Authentication required');
+    }
+    
     const response = await fetch(`${API_BASE_URL}/save`, {
         method: 'POST',
         headers: {
+            'Authorization': `Bearer ${idToken}`,
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(movieData)
@@ -195,11 +254,24 @@ async function removeMovieFromSaved(imdbId) {
 
 // Load Saved Movies
 async function loadSavedMovies() {
+    const user = window.firebaseAuth ? window.firebaseAuth.getCurrentUser() : null;
+    if (!user) {
+        showSavedError('Please sign in to view your saved movies');
+        return;
+    }
+    
     showSavedLoading();
     hideSavedError();
     
     try {
-        const response = await fetch(`${API_BASE_URL}/saved`);
+        const idToken = await window.firebaseAuth.getIdToken();
+        const response = await fetch(`${API_BASE_URL}/saved`, {
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
         const data = await response.json();
         
         if (!response.ok) {
@@ -254,8 +326,17 @@ function displaySavedMovies(movies) {
 // Remove Saved Movie
 async function removeSavedMovie(movieId) {
     try {
+        const idToken = window.firebaseAuth ? await window.firebaseAuth.getIdToken() : null;
+        if (!idToken) {
+            throw new Error('Authentication required');
+        }
+        
         const response = await fetch(`${API_BASE_URL}/${movieId}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${idToken}`,
+                'Content-Type': 'application/json'
+            }
         });
         
         const data = await response.json();
@@ -275,6 +356,15 @@ async function removeSavedMovie(movieId) {
 
 // Tab Switching
 function switchTab(tabName) {
+    // Check if user is authenticated for non-search tabs
+    if (tabName !== 'search') {
+        const user = window.firebaseAuth ? window.firebaseAuth.getCurrentUser() : null;
+        if (!user) {
+            showTemporaryMessage('Please sign in to access this feature', 'error');
+            return;
+        }
+    }
+    
     // Update tab buttons
     tabBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabName);
@@ -374,6 +464,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Check API health on load
     checkAPIHealth();
+    
+    // Initialize auth UI after Firebase loads
+    setTimeout(() => {
+        if (window.firebaseAuth) {
+            window.firebaseAuth.updateAuthUI();
+        }
+    }, 1000);
 });
 
 // Check API Health

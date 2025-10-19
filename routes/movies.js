@@ -1,15 +1,17 @@
 const express = require('express');
 const axios = require('axios');
 const database = require('../services/database');
+const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
 const OMDB_API_KEY = process.env.OMDB_API_KEY || '26722011';
 const OMDB_BASE_URL = 'https://www.omdbapi.com/';
 
-// GET /api/movies/search?title=...
-router.get('/search', async (req, res) => {
+// GET /api/movies/search?title=... (requires authentication)
+router.get('/search', authenticateToken, async (req, res) => {
     try {
         const { title } = req.query;
+        const userId = req.user.uid;
         
         if (!title) {
             return res.status(400).json({ 
@@ -34,7 +36,7 @@ router.get('/search', async (req, res) => {
         }
 
         // Add to search history
-        await database.addSearchHistory(title);
+        await database.addSearchHistory(title, userId);
 
         // Format the response
         const formattedData = {
@@ -63,10 +65,11 @@ router.get('/search', async (req, res) => {
     }
 });
 
-// POST /api/movies/save - Save movie to database
-router.post('/save', async (req, res) => {
+// POST /api/movies/save - Save movie to database (requires authentication)
+router.post('/save', authenticateToken, async (req, res) => {
     try {
         const movieData = req.body;
+        const userId = req.user.uid;
         
         if (!movieData.title || !movieData.imdbID) {
             return res.status(400).json({ 
@@ -74,7 +77,10 @@ router.post('/save', async (req, res) => {
             });
         }
 
-        const result = await database.saveMovie(movieData);
+        // Create/update user profile
+        await database.upsertUserProfile(req.user);
+
+        const result = await database.saveMovie(movieData, userId);
         
         res.json({
             success: true,
@@ -91,10 +97,11 @@ router.post('/save', async (req, res) => {
     }
 });
 
-// GET /api/movies/saved - Get all saved movies
-router.get('/saved', async (req, res) => {
+// GET /api/movies/saved - Get all saved movies (requires authentication)
+router.get('/saved', authenticateToken, async (req, res) => {
     try {
-        const movies = await database.getSavedMovies();
+        const userId = req.user.uid;
+        const movies = await database.getSavedMovies(userId);
         
         res.json({
             success: true,
@@ -110,11 +117,12 @@ router.get('/saved', async (req, res) => {
     }
 });
 
-// GET /api/movies/history - Get search history
-router.get('/history', async (req, res) => {
+// GET /api/movies/history - Get search history (requires authentication)
+router.get('/history', authenticateToken, async (req, res) => {
     try {
+        const userId = req.user.uid;
         const { limit = 10 } = req.query;
-        const history = await database.getSearchHistory(parseInt(limit));
+        const history = await database.getSearchHistory(userId, parseInt(limit));
         
         res.json({
             success: true,
@@ -130,10 +138,11 @@ router.get('/history', async (req, res) => {
     }
 });
 
-// DELETE /api/movies/:id - Delete movie from saved list
-router.delete('/:id', async (req, res) => {
+// DELETE /api/movies/:id - Delete movie from saved list (requires authentication)
+router.delete('/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.user.uid;
         
         if (!id) {
             return res.status(400).json({ 
@@ -141,7 +150,7 @@ router.delete('/:id', async (req, res) => {
             });
         }
 
-        await database.deleteMovie(id);
+        await database.deleteMovie(id, userId);
         
         res.json({
             success: true,
@@ -157,10 +166,11 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// GET /api/movies/check/:imdbId - Check if movie exists in database
-router.get('/check/:imdbId', async (req, res) => {
+// GET /api/movies/check/:imdbId - Check if movie exists in database (requires authentication)
+router.get('/check/:imdbId', authenticateToken, async (req, res) => {
     try {
         const { imdbId } = req.params;
+        const userId = req.user.uid;
         
         if (!imdbId) {
             return res.status(400).json({ 
@@ -168,7 +178,7 @@ router.get('/check/:imdbId', async (req, res) => {
             });
         }
 
-        const exists = await database.movieExists(imdbId);
+        const exists = await database.movieExists(imdbId, userId);
         
         res.json({
             success: true,
