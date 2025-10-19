@@ -17,7 +17,6 @@
         <div class="nav-tabs">
             <button class="tab-btn active" data-tab="search">Search</button>
             <button class="tab-btn" data-tab="saved">My Movies</button>
-            <button class="tab-btn" data-tab="history">History</button>
         </div>
 
         <!-- Search Tab -->
@@ -77,24 +76,6 @@
             </div>
             <div id="savedError" class="error hidden">
                 <p id="savedErrorMessage"></p>
-            </div>
-        </div>
-
-        <!-- History Tab -->
-        <div id="historyTab" class="tab-content">
-            <div class="section-header">
-                <h2>Search History</h2>
-                <button id="refreshHistoryBtn" class="refresh-btn">Refresh</button>
-            </div>
-            <div id="searchHistory" class="history-list">
-                <!-- Search history will be loaded here -->
-            </div>
-            <div id="historyLoading" class="loading hidden">
-                <div class="spinner"></div>
-                <p>Loading search history...</p>
-            </div>
-            <div id="historyError" class="error hidden">
-                <p id="historyErrorMessage"></p>
             </div>
         </div>
     </div>

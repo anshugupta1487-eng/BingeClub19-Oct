@@ -43,6 +43,9 @@ header p {
     border-radius: 15px;
     padding: 5px;
     backdrop-filter: blur(10px);
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .tab-btn {
@@ -295,41 +298,6 @@ header p {
     background: #c82333;
 }
 
-/* History List */
-.history-list {
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    overflow: hidden;
-}
-
-.history-item {
-    padding: 20px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background 0.3s ease;
-}
-
-.history-item:hover {
-    background: #f8f9fa;
-}
-
-.history-item:last-child {
-    border-bottom: none;
-}
-
-.history-query {
-    font-weight: 600;
-    color: #333;
-}
-
-.history-time {
-    color: #666;
-    font-size: 0.9rem;
-}
-
 /* Ratings Section */
 .ratings-section {
     padding: 0 30px 30px;
@@ -443,12 +411,13 @@ header p {
     }
     
     .nav-tabs {
-        flex-direction: column;
-        gap: 5px;
+        max-width: 100%;
+        margin: 0 0 30px 0;
     }
     
     .tab-btn {
         padding: 12px 15px;
+        font-size: 0.9rem;
     }
     
     .input-group {
@@ -482,11 +451,5 @@ header p {
         flex-direction: column;
         gap: 15px;
         text-align: center;
-    }
-    
-    .history-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
     }
 }

@@ -26,13 +26,6 @@ const savedError = document.getElementById('savedError');
 const savedErrorMessage = document.getElementById('savedErrorMessage');
 const refreshSavedBtn = document.getElementById('refreshSavedBtn');
 
-// History elements
-const searchHistory = document.getElementById('searchHistory');
-const historyLoading = document.getElementById('historyLoading');
-const historyError = document.getElementById('historyError');
-const historyErrorMessage = document.getElementById('historyErrorMessage');
-const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
-
 // State
 let currentMovie = null;
 
@@ -40,7 +33,6 @@ let currentMovie = null;
 searchForm.addEventListener('submit', handleSearch);
 saveBtn.addEventListener('click', handleSaveMovie);
 refreshSavedBtn.addEventListener('click', loadSavedMovies);
-refreshHistoryBtn.addEventListener('click', loadSearchHistory);
 
 // Tab switching
 tabBtns.forEach(btn => {
@@ -259,51 +251,6 @@ function displaySavedMovies(movies) {
     `).join('');
 }
 
-// Load Search History
-async function loadSearchHistory() {
-    showHistoryLoading();
-    hideHistoryError();
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/history?limit=20`);
-        const data = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(data.error || 'Failed to load search history');
-        }
-        
-        displaySearchHistory(data.data);
-    } catch (err) {
-        showHistoryError(err.message || 'Failed to load search history');
-        console.error('Error:', err);
-    }
-}
-
-// Display Search History
-function displaySearchHistory(history) {
-    hideHistoryLoading();
-    
-    if (!history || history.length === 0) {
-        searchHistory.innerHTML = `
-            <div class="empty-state">
-                <h3>No search history</h3>
-                <p>Start searching for movies to see your history here!</p>
-            </div>
-        `;
-        return;
-    }
-    
-    searchHistory.innerHTML = history.map(item => `
-        <div class="history-item">
-            <div>
-                <div class="history-query">${item.search_query}</div>
-                ${item.movies ? `<div class="movie-info">${item.movies.title} (${item.movies.year})</div>` : ''}
-            </div>
-            <div class="history-time">${formatDate(item.searched_at)}</div>
-        </div>
-    `).join('');
-}
-
 // Remove Saved Movie
 async function removeSavedMovie(movieId) {
     try {
@@ -338,11 +285,9 @@ function switchTab(tabName) {
         content.classList.toggle('active', content.id === `${tabName}Tab`);
     });
     
-    // Load data when switching to saved or history tabs
+    // Load data when switching to saved tab
     if (tabName === 'saved') {
         loadSavedMovies();
-    } else if (tabName === 'history') {
-        loadSearchHistory();
     }
 }
 
@@ -397,31 +342,7 @@ function hideSavedError() {
     savedError.classList.add('hidden');
 }
 
-function showHistoryLoading() {
-    historyLoading.classList.remove('hidden');
-    searchHistory.innerHTML = '';
-}
-
-function hideHistoryLoading() {
-    historyLoading.classList.add('hidden');
-}
-
-function showHistoryError(message) {
-    hideHistoryLoading();
-    historyErrorMessage.textContent = message;
-    historyError.classList.remove('hidden');
-}
-
-function hideHistoryError() {
-    historyError.classList.add('hidden');
-}
-
 // Utility Functions
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-}
-
 function showTemporaryMessage(message, type = 'info') {
     const messageDiv = document.createElement('div');
     messageDiv.className = `temp-message ${type}`;
@@ -492,12 +413,6 @@ style.textContent = `
     .no-ratings {
         color: #666;
         font-style: italic;
-    }
-    
-    .movie-info {
-        color: #666;
-        font-size: 0.9rem;
-        margin-top: 5px;
     }
 `;
 document.head.appendChild(style);
