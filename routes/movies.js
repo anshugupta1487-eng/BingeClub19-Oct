@@ -13,6 +13,8 @@ router.get('/search', authenticateToken, async (req, res) => {
         const { title } = req.query;
         const userId = req.user.uid;
         
+        console.log('Search request:', { title, userId });
+        
         if (!title) {
             return res.status(400).json({ 
                 error: 'Title parameter is required' 
@@ -71,16 +73,34 @@ router.post('/save', authenticateToken, async (req, res) => {
         const movieData = req.body;
         const userId = req.user.uid;
         
+        console.log('Save movie request:', { 
+            movieTitle: movieData.title, 
+            userId, 
+            imdbID: movieData.imdbID 
+        });
+        
         if (!movieData.title || !movieData.imdbID) {
+            console.error('Missing required fields:', { 
+                title: movieData.title, 
+                imdbID: movieData.imdbID 
+            });
             return res.status(400).json({ 
                 error: 'Title and IMDB ID are required' 
             });
         }
 
+        // Test database connection
+        console.log('Testing database connection...');
+        
         // Create/update user profile
+        console.log('Creating/updating user profile...');
         await database.upsertUserProfile(req.user);
+        console.log('User profile updated successfully');
 
+        // Save movie
+        console.log('Saving movie to database...');
         const result = await database.saveMovie(movieData, userId);
+        console.log('Movie saved successfully:', result);
         
         res.json({
             success: true,
@@ -90,9 +110,16 @@ router.post('/save', authenticateToken, async (req, res) => {
 
     } catch (error) {
         console.error('Error saving movie:', error);
+        console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
+        
         res.status(500).json({ 
             error: 'Failed to save movie',
-            message: error.message 
+            message: error.message,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
@@ -101,7 +128,10 @@ router.post('/save', authenticateToken, async (req, res) => {
 router.get('/saved', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.uid;
+        console.log('Fetching saved movies for user:', userId);
+        
         const movies = await database.getSavedMovies(userId);
+        console.log('Found saved movies:', movies.length);
         
         res.json({
             success: true,
@@ -199,6 +229,22 @@ router.get('/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         service: 'Movies API',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// GET /api/movies/debug - Debug endpoint to check configuration
+router.get('/debug', (req, res) => {
+    res.json({
+        status: 'OK',
+        environment: {
+            nodeEnv: process.env.NODE_ENV,
+            hasSupabaseUrl: !!process.env.SUPABASE_URL,
+            hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
+            hasFirebaseProjectId: !!process.env.FIREBASE_PROJECT_ID,
+            hasFirebasePrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+            hasFirebaseClientEmail: !!process.env.FIREBASE_CLIENT_EMAIL
+        },
         timestamp: new Date().toISOString()
     });
 });

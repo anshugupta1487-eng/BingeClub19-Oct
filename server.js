@@ -4,6 +4,7 @@ const path = require('path');
 require('dotenv').config();
 
 const movieRoutes = require('./routes/movies');
+const debugRoutes = require('./routes/debug');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 // CORS Configuration for Render
 const corsOptions = {
     origin: [
-        'https://binge-club-19-oct.onrender.com', // Your Render URL
+        'https://bingeclub19-oct.onrender.com', // Your Render URL
         'http://localhost:3000' // For local development
     ],
     credentials: true,
@@ -27,6 +28,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Routes
 app.use('/api/movies', movieRoutes);
+app.use('/api/debug', debugRoutes);
 
 // Serve the main page
 app.get('/', (req, res) => {
@@ -59,6 +61,7 @@ app.use('*', (req, res) => {
 app.listen(PORT, () => {
     console.log(`🎬 Binge Club server running on port ${PORT}`);
     console.log(`🌐 Visit: http://localhost:${PORT}`);
+    console.log(`🔧 Debug endpoints available at /api/debug`);
 });
 
 module.exports = app;
