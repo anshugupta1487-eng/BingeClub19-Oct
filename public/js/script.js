@@ -1,6 +1,5 @@
 // API Configuration
-const API_KEY = '26722011';
-const API_BASE_URL = 'https://www.omdbapi.com/';
+const API_BASE_URL = '/api/movies';
 
 // DOM Elements
 const searchForm = document.getElementById('searchForm');
@@ -32,44 +31,40 @@ async function handleSearch(e) {
     
     try {
         const data = await fetchMovieData(query);
-        
-        if (data.Response === 'True') {
-            displayMovieData(data);
-        } else {
-            showError(data.Error || 'Movie/TV show not found');
-        }
+        displayMovieData(data);
     } catch (err) {
-        showError('Failed to fetch data. Please check your internet connection.');
+        showError(err.message || 'Failed to fetch data. Please try again.');
         console.error('Error:', err);
     }
 }
 
-// Fetch Movie Data from OMDb API
+// Fetch Movie Data from our API
 async function fetchMovieData(title) {
-    const url = `${API_BASE_URL}?t=${encodeURIComponent(title)}&apikey=${API_KEY}`;
+    const url = `${API_BASE_URL}/search?title=${encodeURIComponent(title)}`;
     
     const response = await fetch(url);
+    const data = await response.json();
     
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
     }
     
-    return await response.json();
+    return data;
 }
 
 // Display Movie Data
 function displayMovieData(data) {
     // Set basic info
-    movieTitle.textContent = data.Title || 'N/A';
-    movieYear.textContent = data.Year || 'N/A';
-    moviePlot.textContent = data.Plot || 'No plot available';
+    movieTitle.textContent = data.title || 'N/A';
+    movieYear.textContent = data.year || 'N/A';
+    moviePlot.textContent = data.plot || 'No plot available';
     
     // Clear previous ratings
     ratingsContainer.innerHTML = '';
     
     // Display ratings
-    if (data.Ratings && data.Ratings.length > 0) {
-        data.Ratings.forEach(rating => {
+    if (data.ratings && data.ratings.length > 0) {
+        data.ratings.forEach(rating => {
             const ratingElement = createRatingElement(rating.Source, rating.Value);
             ratingsContainer.appendChild(ratingElement);
         });
@@ -138,4 +133,18 @@ function hideError() {
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
     searchInput.focus();
+    
+    // Check API health on load
+    checkAPIHealth();
 });
+
+// Check API Health
+async function checkAPIHealth() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/health`);
+        const data = await response.json();
+        console.log('API Health:', data);
+    } catch (err) {
+        console.warn('API Health check failed:', err);
+    }
+}
