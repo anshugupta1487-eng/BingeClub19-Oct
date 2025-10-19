@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binge Club - Movie & TV Show Ratings</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Binge Club</h1>
+            <p>Discover ratings for your favorite movies and TV shows</p>
+        </header>
+
+        <div class="search-section">
+            <form id="searchForm" class="search-form">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Enter movie or TV show title..." 
+                        required
+                    >
+                    <button type="submit" id="searchBtn">Search</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Searching for your show...</p>
+        </div>
+
+        <div id="results" class="results hidden">
+            <div class="movie-card">
+                <h2 id="movieTitle"></h2>
+                <p id="movieYear" class="year"></p>
+                <p id="moviePlot" class="plot"></p>
+                
+                <div class="ratings-section">
+                    <h3>Ratings</h3>
+                    <div id="ratingsContainer" class="ratings-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="error" class="error hidden">
+            <p id="errorMessage"></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
