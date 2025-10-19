@@ -1,63 +1,43 @@
 const { verifyIdToken } = require('../services/firebase');
 
-// Middleware to verify Firebase ID token
-async function authenticateToken(req, res, next) {
+const authenticateToken = async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
-        
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ 
-                error: 'Access denied. No token provided.' 
-            });
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+        if (!token) {
+            return res.status(401).json({ error: 'Access token required' });
         }
+
+        console.log('Verifying token for user...');
         
-        const idToken = authHeader.split(' ')[1];
+        // Verify the Firebase ID token
+        const decodedToken = await verifyIdToken(token);
         
-        // Verify the token with Firebase
-        const result = await verifyIdToken(idToken);
-        
-        if (!result.success) {
-            return res.status(401).json({ 
-                error: 'Invalid token.',
-                details: result.error 
-            });
-        }
-        
-        // Add user info to request object
-        req.user = result.user;
+        console.log('Token verified successfully for user:', decodedToken.uid);
+        console.log('User data from token:', {
+            uid: decodedToken.uid,
+            email: decodedToken.email,
+            name: decodedToken.name,
+            picture: decodedToken.picture
+        });
+
+        // Attach user info to request
+        req.user = {
+            uid: decodedToken.uid,
+            email: decodedToken.email,
+            name: decodedToken.name,
+            picture: decodedToken.picture
+        };
+
         next();
     } catch (error) {
         console.error('Authentication error:', error);
-        res.status(401).json({ 
-            error: 'Authentication failed.',
-            details: error.message 
+        res.status(403).json({ 
+            error: 'Invalid or expired token',
+            message: error.message 
         });
     }
-}
-
-// Optional authentication middleware (doesn't fail if no token)
-async function optionalAuth(req, res, next) {
-    try {
-        const authHeader = req.headers.authorization;
-        
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const idToken = authHeader.split(' ')[1];
-            const result = await verifyIdToken(idToken);
-            
-            if (result.success) {
-                req.user = result.user;
-            }
-        }
-        
-        next();
-    } catch (error) {
-        console.error('Optional auth error:', error);
-        // Continue without authentication
-        next();
-    }
-}
-
-module.exports = {
-    authenticateToken,
-    optionalAuth
 };
+
+module.exports = { authenticateToken };
