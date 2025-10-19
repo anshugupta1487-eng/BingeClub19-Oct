@@ -1,11 +1,12 @@
 // Firebase configuration
+// IMPORTANT: Replace these with your actual Firebase config values
 const firebaseConfig = {
-    apiKey: "your_firebase_api_key",
-    authDomain: "your_project_id.firebaseapp.com",
-    projectId: "your_project_id",
-    storageBucket: "your_project_id.appspot.com",
-    messagingSenderId: "your_messaging_sender_id",
-    appId: "your_app_id"
+    apiKey: "AIzaSyBxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", // Replace with your API key
+    authDomain: "binge-club-xxxxx.firebaseapp.com", // Replace with your project ID
+    projectId: "binge-club-xxxxx", // Replace with your project ID
+    storageBucket: "binge-club-xxxxx.appspot.com", // Replace with your project ID
+    messagingSenderId: "123456789012", // Replace with your sender ID
+    appId: "1:123456789012:web:abcdef1234567890" // Replace with your app ID
 };
 
 // Initialize Firebase
@@ -16,14 +17,22 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+// Configure Google provider
+provider.setCustomParameters({
+    prompt: 'select_account'
+});
+
 // Authentication state management
 let currentUser = null;
 
 // Sign in with Google
 async function signInWithGoogle() {
     try {
+        console.log('Attempting Google sign-in...');
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
+        
+        console.log('Sign-in successful:', user);
         
         // Get ID token for backend verification
         const idToken = await user.getIdToken();
@@ -45,8 +54,22 @@ async function signInWithGoogle() {
         
         return { success: true, user: currentUser };
     } catch (error) {
-        console.error('Error signing in:', error);
-        showTemporaryMessage('Failed to sign in. Please try again.', 'error');
+        console.error('Google sign-in error:', error);
+        
+        // More specific error messages
+        let errorMessage = 'Failed to sign in. Please try again.';
+        
+        if (error.code === 'auth/popup-closed-by-user') {
+            errorMessage = 'Sign-in was cancelled. Please try again.';
+        } else if (error.code === 'auth/popup-blocked') {
+            errorMessage = 'Popup was blocked. Please allow popups and try again.';
+        } else if (error.code === 'auth/network-request-failed') {
+            errorMessage = 'Network error. Please check your connection.';
+        } else if (error.code === 'auth/unauthorized-domain') {
+            errorMessage = 'Domain not authorized. Please contact support.';
+        }
+        
+        showTemporaryMessage(errorMessage, 'error');
         return { success: false, error: error.message };
     }
 }
@@ -76,6 +99,8 @@ async function signOutUser() {
 
 // Listen for auth state changes
 onAuthStateChanged(auth, (user) => {
+    console.log('Auth state changed:', user ? 'User signed in' : 'User signed out');
+    
     if (user) {
         // User is signed in
         user.getIdToken().then((idToken) => {
@@ -232,3 +257,29 @@ window.firebaseAuth = {
     getIdToken,
     updateAuthUI
 };
+
+// Show temporary message function (if not already defined)
+function showTemporaryMessage(message, type = 'info') {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `temp-message ${type}`;
+    messageDiv.textContent = message;
+    messageDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+        background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+    `;
+    
+    document.body.appendChild(messageDiv);
+    
+    setTimeout(() => {
+        messageDiv.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => messageDiv.remove(), 300);
+    }, 3000);
+}
