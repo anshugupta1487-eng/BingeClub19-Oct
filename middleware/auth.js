@@ -12,8 +12,16 @@ const authenticateToken = async (req, res, next) => {
         console.log('Verifying token for user...');
         
         // Verify the Firebase ID token
-        const decodedToken = await verifyIdToken(token);
+        const result = await verifyIdToken(token);
         
+        if (!result.success) {
+            return res.status(403).json({ 
+                error: 'Invalid or expired token',
+                message: result.error 
+            });
+        }
+        
+        const decodedToken = result.user;
         console.log('Token verified successfully for user:', decodedToken.uid);
         console.log('User data from token:', {
             uid: decodedToken.uid,

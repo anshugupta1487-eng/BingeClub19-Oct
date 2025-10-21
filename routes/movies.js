@@ -4,7 +4,16 @@ const { database } = require('../services/database');
 const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
-// Apply authentication to all movie routes
+// Health check (no authentication required)
+router.get('/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        message: 'Movies API is healthy',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// Apply authentication to all other movie routes
 router.use(authenticateToken);
 
 // Search for movies
@@ -134,15 +143,6 @@ router.get('/check/:imdbId', async (req, res) => {
             message: error.message 
         });
     }
-});
-
-// Health check
-router.get('/health', (req, res) => {
-    res.json({ 
-        status: 'OK', 
-        message: 'Movies API is healthy',
-        timestamp: new Date().toISOString()
-    });
 });
 
 module.exports = router;

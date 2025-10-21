@@ -92,7 +92,7 @@ async function handleSearch(e) {
         const data = await fetchMovieData(query);
         currentMovie = data;
         displayMovieData(data);
-        await checkMovieExists(data.imdbID);
+        await checkMovieExists(data.imdbID || data.imdbId);
     } catch (err) {
         console.error('Search error:', err);
         showError(err.message || 'Failed to fetch data. Please try again.');
@@ -162,17 +162,18 @@ async function getAuthTokenWithRetry(maxRetries = 3) {
 
 // Display Movie Data
 function displayMovieData(data) {
-    // Set basic info
-    movieTitle.textContent = data.title || 'N/A';
-    movieYear.textContent = data.year || 'N/A';
-    moviePlot.textContent = data.plot || 'No plot available';
+    // Set basic info - map OMDb API response fields to display
+    movieTitle.textContent = data.Title || data.title || 'N/A';
+    movieYear.textContent = data.Year || data.year || 'N/A';
+    moviePlot.textContent = data.Plot || data.plot || 'No plot available';
     
     // Clear previous ratings
     ratingsContainer.innerHTML = '';
     
-    // Display ratings
-    if (data.ratings && data.ratings.length > 0) {
-        data.ratings.forEach(rating => {
+    // Display ratings - handle both OMDb API format and our format
+    const ratings = data.Ratings || data.ratings;
+    if (ratings && ratings.length > 0) {
+        ratings.forEach(rating => {
             const ratingElement = createRatingElement(rating.Source, rating.Value);
             ratingsContainer.appendChild(ratingElement);
         });
@@ -266,7 +267,7 @@ async function saveMovieToDatabase(movieData) {
         throw new Error('Authentication required. Please sign in again.');
     }
     
-    console.log('Saving movie:', movieData.title);
+    console.log('Saving movie:', movieData.Title || movieData.title);
     console.log('Movie data:', movieData);
     
     const response = await fetch(`${API_BASE_URL}/save`, {
