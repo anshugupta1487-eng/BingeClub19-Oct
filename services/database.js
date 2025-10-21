@@ -83,19 +83,19 @@ class DatabaseService {
                 throw new Error('Movie already exists in your list');
             }
 
-            // Prepare movie data
+            // Prepare movie data - map OMDb API fields to database fields
             const movieRecord = {
-                title: movieData.title,
-                year: movieData.year,
-                plot: movieData.plot,
-                imdb_id: movieData.imdbID,
-                poster_url: movieData.poster,
-                genre: movieData.genre,
-                director: movieData.director,
-                actors: movieData.actors,
-                imdb_rating: movieData.imdbRating,
-                imdb_votes: movieData.imdbVotes,
-                type: movieData.type,
+                title: movieData.Title || movieData.title,
+                year: movieData.Year || movieData.year,
+                plot: movieData.Plot || movieData.plot,
+                imdb_id: movieData.imdbID || movieData.imdbId,
+                poster_url: movieData.Poster || movieData.poster,
+                genre: movieData.Genre || movieData.genre,
+                director: movieData.Director || movieData.director,
+                actors: movieData.Actors || movieData.actors,
+                imdb_rating: movieData.imdbRating || movieData.ImdbRating,
+                imdb_votes: movieData.imdbVotes || movieData.ImdbVotes,
+                type: movieData.Type || movieData.type,
                 user_id: userId
             };
 
@@ -111,9 +111,10 @@ class DatabaseService {
                 throw movieError;
             }
 
-            // Save ratings if they exist
-            if (movieData.ratings && movieData.ratings.length > 0) {
-                const ratingRecords = movieData.ratings.map(rating => ({
+            // Save ratings if they exist - handle both OMDb and internal formats
+            const ratings = movieData.Ratings || movieData.ratings;
+            if (ratings && ratings.length > 0) {
+                const ratingRecords = ratings.map(rating => ({
                     movie_id: movie.id,
                     source: rating.Source,
                     value: rating.Value,
